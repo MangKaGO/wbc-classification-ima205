@@ -1,12 +1,12 @@
-"""Baseline Machine Learning classique sur les features manuelles.
+"""Classical machine learning baseline on the handcrafted features.
 
-Usage :
+Usage:
     python -m wbc.classical --model lightgbm
     python -m wbc.classical --model svm
 
-Évalue le modèle en validation croisée stratifiée à 5 plis (Macro F1), puis le
-ré-entraîne sur tout le jeu d'entraînement pour produire une soumission.
-Nécessite d'avoir lancé `python -m wbc.features` au préalable.
+Evaluates the model with stratified 5-fold cross-validation (Macro F1), then
+refits it on the whole training set to produce a submission.
+Requires running `python -m wbc.features` first.
 """
 
 import argparse
@@ -32,8 +32,8 @@ def build_model(name: str):
     elif name == "svm":
         clf = SVC(kernel="rbf", C=10, gamma="scale", class_weight="balanced", random_state=SEED)
     else:
-        raise ValueError(f"Modèle inconnu : {name!r}")
-    # Le scaler est intégré au pipeline pour être ré-appris sur chaque pli.
+        raise ValueError(f"Unknown model: {name!r}")
+    # The scaler is part of the pipeline so it is refitted on each fold.
     return make_pipeline(StandardScaler(), clf)
 
 
@@ -52,7 +52,7 @@ def main():
     model = build_model(args.model)
     skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=SEED)
 
-    print(f"Validation croisée 5 plis — {args.model}")
+    print(f"5-fold cross-validation — {args.model}")
     fold_scores = []
     oof_pred = np.empty_like(y)
     for fold, (tr, va) in enumerate(skf.split(X, y), start=1):
@@ -60,16 +60,16 @@ def main():
         oof_pred[va] = model.predict(X[va])
         score = f1_score(y[va], oof_pred[va], average="macro")
         fold_scores.append(score)
-        print(f"  Pli {fold} — Macro F1 : {score:.4f}")
-    print(f"Macro F1 moyen : {np.mean(fold_scores):.4f} ± {np.std(fold_scores):.4f}\n")
-    print("Rapport de classification (prédictions out-of-fold) :")
+        print(f"  Fold {fold} — Macro F1: {score:.4f}")
+    print(f"Mean Macro F1: {np.mean(fold_scores):.4f} ± {np.std(fold_scores):.4f}\n")
+    print("Classification report (out-of-fold predictions):")
     print(classification_report(y, oof_pred, zero_division=0))
 
     model.fit(X, y)
     args.out_dir.mkdir(parents=True, exist_ok=True)
     out = args.out_dir / f"submission_{args.model}.csv"
     pd.DataFrame({"ID": test["ID"], "label": model.predict(X_test)}).to_csv(out, index=False)
-    print(f"Soumission écrite : {out}")
+    print(f"Submission written: {out}")
 
 
 if __name__ == "__main__":

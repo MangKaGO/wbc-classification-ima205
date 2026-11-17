@@ -1,13 +1,13 @@
-# Données du challenge (non versionnées)
+# Challenge data (not versioned)
 IMA205-challenge/
 
-# Artefacts générés : features, poids, soumissions
+# Generated artifacts: features, weights, submissions
 outputs/
 *.pth
 *.pt
 submission*.csv
 
-# Notebook d'origine (avant nettoyage)
+# Original notebook (before cleanup)
 archive/
 
 # Python

@@ -1,9 +1,9 @@
-"""Extraction manuelle de caractéristiques (couleur HSV, forme, texture GLCM).
+"""Handcrafted feature extraction (HSV color, shape, GLCM texture).
 
-Usage :
+Usage:
     python -m wbc.features [--data-dir IMA205-challenge]
 
-Produit outputs/train_features.csv et outputs/test_features.csv (15 features par image).
+Writes outputs/train_features.csv and outputs/test_features.csv (15 features per image).
 """
 
 import argparse
@@ -22,7 +22,7 @@ GLCM_PROPS = ["contrast", "dissimilarity", "homogeneity", "energy", "correlation
 
 
 def extract_features(image_path: Path) -> dict | None:
-    """Calcule les 15 caractéristiques d'une image, ou None si illisible."""
+    """Compute the 15 features of an image, or None if it cannot be read."""
     image = cv2.imread(str(image_path))
     if image is None:
         return None
@@ -31,12 +31,12 @@ def extract_features(image_path: Path) -> dict | None:
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     features = {}
 
-    # 1. Couleur : moyenne et écart-type de chaque canal HSV.
+    # 1. Color: mean and standard deviation of each HSV channel.
     for i, channel in enumerate("HSV"):
         features[f"color_{channel}_mean"] = hsv[:, :, i].mean()
         features[f"color_{channel}_std"] = hsv[:, :, i].std()
 
-    # 2. Forme : contour principal après seuillage d'Otsu inversé.
+    # 2. Shape: main contour after inverted Otsu thresholding.
     _, mask = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     area = perimeter = circularity = aspect_ratio = 0.0
@@ -54,7 +54,7 @@ def extract_features(image_path: Path) -> dict | None:
     features["shape_circularity"] = circularity
     features["shape_aspect_ratio"] = aspect_ratio
 
-    # 3. Texture : propriétés de la GLCM (distance 1 px, angle 0°).
+    # 3. Texture: GLCM properties (distance 1 px, angle 0°).
     glcm = graycomatrix(gray, distances=[1], angles=[0], symmetric=True, normed=True)
     for prop in GLCM_PROPS:
         features[f"tex_{prop}"] = graycoprops(glcm, prop)[0, 0]
@@ -63,12 +63,12 @@ def extract_features(image_path: Path) -> dict | None:
 
 
 def build_feature_table(df: pd.DataFrame, img_dir: Path) -> pd.DataFrame:
-    """Extrait les features de chaque image de `df` (colonnes conservées : ID, label)."""
+    """Extract features for every image in `df` (keeps the ID and label columns)."""
     rows = []
     for row in tqdm(df.itertuples(index=False), total=len(df), desc=f"Features {img_dir.name}"):
         feats = extract_features(img_dir / row.ID)
         if feats is None:
-            print(f"Image illisible ignorée : {row.ID}")
+            print(f"Skipping unreadable image: {row.ID}")
             continue
         rows.append({**row._asdict(), **feats})
     return pd.DataFrame(rows)
@@ -90,7 +90,7 @@ def main():
         table = build_feature_table(df, img_dir)
         out = args.out_dir / f"{name}_features.csv"
         table.to_csv(out, index=False)
-        print(f"{out} : {table.shape[0]} lignes, {table.shape[1]} colonnes")
+        print(f"{out}: {table.shape[0]} rows, {table.shape[1]} columns")
 
 
 if __name__ == "__main__":

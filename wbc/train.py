@@ -1,15 +1,15 @@
-"""Entraînement d'un ResNet par transfert d'apprentissage (ImageNet).
+"""Train a ResNet with transfer learning (ImageNet weights).
 
-Exemples (voir README pour les configurations du rapport) :
-    # ResNet18 V2 — meilleur modèle (0.7030 sur Kaggle)
+Examples (see the README for the configurations from the report):
+    # ResNet18 V2 — best model (0.7030 on Kaggle)
     python -m wbc.train --arch resnet18 --epochs 25 --augment strong --class-weights
 
-    # Fine-tuning final sur 100 % des données à partir d'un checkpoint
+    # Final fine-tuning on 100% of the data, starting from a checkpoint
     python -m wbc.train --arch resnet18 --full-data --init-weights outputs/resnet18.pth \\
         --epochs 3 --lr 1e-5 --augment strong --class-weights --output outputs/resnet18_full.pth
 
-Sans --full-data, le jeu est séparé en 80/20 stratifié et seuls les poids ayant
-le meilleur Macro F1 de validation sont sauvegardés (best checkpoint).
+Without --full-data, the data is split 80/20 (stratified) and only the weights with
+the best validation Macro F1 are saved (best checkpoint).
 """
 
 import argparse
@@ -36,7 +36,7 @@ def build_scheduler(name: str, optimizer, epochs: int):
     if name == "cosine":
         return optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-6)
     if name == "plateau":
-        # Divise le LR par 2 si le Macro F1 de validation stagne pendant 3 epochs.
+        # Halve the LR when the validation Macro F1 has not improved for 3 epochs.
         return optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="max", factor=0.5, patience=3)
     return None
 
@@ -50,23 +50,23 @@ def parse_args():
     p.add_argument("--lr", type=float, default=1e-4)
     p.add_argument("--weight-decay", type=float, default=1e-2)
     p.add_argument("--augment", choices=["none", "light", "strong"], default="strong")
-    p.add_argument("--class-weights", action="store_true", help="CrossEntropyLoss pondérée (classes rares)")
+    p.add_argument("--class-weights", action="store_true", help="Weighted CrossEntropyLoss (rare classes)")
     p.add_argument("--scheduler", choices=["none", "cosine", "plateau"], default="none")
-    p.add_argument("--full-data", action="store_true", help="Entraîne sur 100 %% des données, sans validation")
-    p.add_argument("--init-weights", type=Path, help="Checkpoint de départ (au lieu des poids ImageNet)")
-    p.add_argument("--no-pretrained", action="store_true", help="Ne pas charger les poids ImageNet")
+    p.add_argument("--full-data", action="store_true", help="Train on 100%% of the data, without validation")
+    p.add_argument("--init-weights", type=Path, help="Starting checkpoint (instead of ImageNet weights)")
+    p.add_argument("--no-pretrained", action="store_true", help="Do not load ImageNet weights")
     p.add_argument("--num-workers", type=int, default=4)
-    p.add_argument("--output", type=Path, help="Fichier .pth de sortie (défaut : outputs/<arch>.pth)")
+    p.add_argument("--output", type=Path, help="Output .pth file (default: outputs/<arch>.pth)")
     return p.parse_args()
 
 
 def main():
     args = parse_args()
     if args.full_data and args.scheduler == "plateau":
-        raise SystemExit("--scheduler plateau nécessite un jeu de validation (incompatible avec --full-data).")
+        raise SystemExit("--scheduler plateau needs a validation set (incompatible with --full-data).")
     torch.manual_seed(SEED)
     device = get_device()
-    print(f"Device : {device}")
+    print(f"Device: {device}")
 
     paths = DataPaths(args.data_dir)
     df = load_train_metadata(paths)
@@ -117,7 +117,7 @@ def main():
             if val_f1 > best_f1:
                 best_f1 = val_f1
                 torch.save(model.state_dict(), output)
-                msg += "  -> meilleur modèle sauvegardé"
+                msg += "  -> new best model saved"
         print(msg)
 
         if args.scheduler == "plateau":
@@ -127,9 +127,9 @@ def main():
 
     if val_loader is None:
         torch.save(model.state_dict(), output)
-        print(f"Poids finaux sauvegardés : {output}")
+        print(f"Final weights saved: {output}")
     else:
-        print(f"Meilleur Macro F1 de validation : {best_f1:.4f} — poids : {output}")
+        print(f"Best validation Macro F1: {best_f1:.4f} — weights: {output}")
 
 
 if __name__ == "__main__":

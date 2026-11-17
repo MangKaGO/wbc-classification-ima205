@@ -1,4 +1,4 @@
-"""Construction des modèles et boucles d'entraînement / inférence."""
+"""Model construction and training / inference loops."""
 
 from pathlib import Path
 
@@ -20,7 +20,7 @@ ARCHITECTURES = {
 
 
 def build_model(arch: str, pretrained: bool = True) -> nn.Module:
-    """ResNet pré-entraîné sur ImageNet avec une tête à NUM_CLASSES sorties."""
+    """ImageNet-pretrained ResNet with a NUM_CLASSES-output head."""
     constructor, weights = ARCHITECTURES[arch]
     model = constructor(weights=weights if pretrained else None)
     model.fc = nn.Linear(model.fc.in_features, NUM_CLASSES)
@@ -34,7 +34,7 @@ def load_model(arch: str, weights_path: Path, device: torch.device) -> nn.Module
 
 
 def train_one_epoch(model, loader: DataLoader, criterion, optimizer, device, desc="Train") -> float:
-    """Une epoch d'entraînement ; renvoie la loss moyenne."""
+    """Run one training epoch and return the mean loss."""
     model.train()
     total_loss = 0.0
     for images, labels in tqdm(loader, desc=desc, leave=False):
@@ -49,14 +49,14 @@ def train_one_epoch(model, loader: DataLoader, criterion, optimizer, device, des
 
 @torch.no_grad()
 def predict_proba(model, loader: DataLoader, device, tta: bool = False) -> np.ndarray:
-    """Probabilités softmax pour chaque image.
+    """Softmax probabilities for each image.
 
-    Avec `tta=True`, moyenne (soft voting) des prédictions sur l'image originale,
-    son miroir horizontal et son miroir vertical.
+    With `tta=True`, averages (soft voting) the predictions on the original image,
+    its horizontal mirror and its vertical mirror.
     """
     model.eval()
     all_probs = []
-    for batch in tqdm(loader, desc="Inférence", leave=False):
+    for batch in tqdm(loader, desc="Inference", leave=False):
         images = batch[0] if isinstance(batch, (list, tuple)) else batch
         images = images.to(device)
         probs = F.softmax(model(images), dim=1)
@@ -69,7 +69,7 @@ def predict_proba(model, loader: DataLoader, device, tta: bool = False) -> np.nd
 
 
 def evaluate_macro_f1(model, loader: DataLoader, device) -> float:
-    """Macro F1 sur un loader qui renvoie (image, label)."""
+    """Macro F1 on a loader that yields (image, label)."""
     y_true = np.asarray(loader.dataset.labels)
     y_pred = predict_proba(model, loader, device).argmax(axis=1)
     return f1_score(y_true, y_pred, average="macro")

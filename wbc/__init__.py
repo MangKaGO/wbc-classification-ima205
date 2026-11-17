@@ -1,1 +1,1 @@
-"""Classification automatique de leucocytes (challenge IMA205)."""
+"""Automatic white blood cell classification (IMA205 challenge)."""

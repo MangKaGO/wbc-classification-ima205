@@ -1,4 +1,4 @@
-"""Constantes partagées et accès aux fichiers du challenge."""
+"""Shared constants and access to the challenge files."""
 
 from pathlib import Path
 
@@ -11,13 +11,13 @@ NUM_CLASSES = 13
 IMG_SIZE = 224
 SEED = 42
 
-# Statistiques ImageNet (les modèles sont pré-entraînés sur ImageNet uniquement).
+# ImageNet statistics (models are pretrained on ImageNet only).
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
 
 
 class DataPaths:
-    """Chemins vers les fichiers du dataset IMA205."""
+    """Paths to the IMA205 dataset files."""
 
     def __init__(self, root: Path | str = DEFAULT_DATA_DIR):
         self.root = Path(root)
