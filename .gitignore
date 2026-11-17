@@ -1,0 +1,24 @@
+# Données du challenge (non versionnées)
+IMA205-challenge/
+
+# Artefacts générés : features, poids, soumissions
+outputs/
+*.pth
+*.pt
+submission*.csv
+
+# Notebook d'origine (avant nettoyage)
+archive/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
